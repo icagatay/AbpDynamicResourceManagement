@@ -153,19 +153,18 @@ GlobalContributors koleksiyonuna DynamicLocalizationResourceContributor eklenere
 Bir sayfada lokalize bir mesaj göstermek istediğinizde ABP’nin sağladığı IStringLocalizer<T> ya da IStringLocalizerFactory kullanılabilir:
 
 ```csharp
-public class HomeController : Controller
+public class MyService : ITransientDependency
 {
-    private readonly IStringLocalizer<HomeController> _localizer;
+    private readonly IStringLocalizer<TestResource> _localizer;
 
-    public HomeController(IStringLocalizer<HomeController> localizer)
+    public MyService(IStringLocalizer<TestResource> localizer)
     {
         _localizer = localizer;
     }
 
-    public IActionResult Index()
+    public void Foo()
     {
-        var message = _localizer["HelloMessage"];
-        return View("Index", message);
+        var str = _localizer["HelloWorld"];
     }
 }
 ```
