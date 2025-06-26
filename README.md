@@ -1,58 +1,183 @@
-﻿# AbpDynamicResourceManagement
+# ABP Framework ile Dinamik Lokalizasyon: Veritabanı Tabanlı Esnek Dil Yönetimi
 
-## About this solution
+## 🎯 Giriş
 
-This is a layered startup solution based on [Domain Driven Design (DDD)](https://abp.io/docs/latest/framework/architecture/domain-driven-design) practises. All the fundamental ABP modules are already installed. Check the [Application Startup Template](https://abp.io/docs/latest/solution-templates/layered-web-application) documentation for more info.
+ABP Framework, güçlü bir yerelleştirme (localization) altyapısı ile gelir. Ancak varsayılan olarak çeviri metinleri `.resx` dosyalarında sabitlenmiştir. Bu yapı, çevrimiçi yönetim paneli üzerinden dil içeriğini değiştirme, çok kiracılı uygulamalarda tenant bazlı çeviri sağlama gibi esneklikler sunmaz.
 
-### Pre-requirements
+Bu yazıda, **ABP Framework’te dinamik olarak veritabanı destekli lokalizasyon** işlemini nasıl gerçekleştirebileceğimizi adım adım ele alacağız. Örnek olarak oluşturulmuş `AbpDynamicResourceManagement` projesinden kod parçalarıyla ilerleyeceğiz.
 
-* [.NET9.0+ SDK](https://dotnet.microsoft.com/download/dotnet)
-* [Node v18 or 20](https://nodejs.org/en)
+---
 
-### Configurations
+## 🧱 Genel Mimari
 
-The solution comes with a default configuration that works out of the box. However, you may consider to change the following configuration before running your solution:
+Dinamik lokalizasyon sistemi şu temel bileşenlerden oluşur:
 
-* Check the `ConnectionStrings` in `appsettings.json` files under the `AbpDynamicResourceManagement.Web` and `AbpDynamicResourceManagement.DbMigrator` projects and change it if you need.
+- `Language`: Tanımlı dillerin tutulduğu entity
+- `LanguageText`: Her dile ait çevirilerin tutulduğu entity
+- `ILanguageTextRepository`: Veri erişim işlemleri için repository arayüzü
+- `DynamicLocalizationResourceContributor`: ABP'nin localization pipeline’ına entegre edilen özel sağlayıcı
+- `AbpLocalizationOptions.GlobalContributors`: Yeni provider’ı tanıtan yapılandırma
 
-### Before running the application
+---
 
-* Run `abp install-libs` command on your solution folder to install client-side package dependencies. This step is automatically done when you create a new solution, if you didn't especially disabled it. However, you should run it yourself if you have first cloned this solution from your source control, or added a new client-side package dependency to your solution.
-* Run `AbpDynamicResourceManagement.DbMigrator` to create the initial database. This step is also automatically done when you create a new solution, if you didn't especially disabled it. This should be done in the first run. It is also needed if a new database migration is added to the solution later.
+## 🗣️ Dil Tanımı: `Language` Entity'si
 
-#### Generating a Signing Certificate
+```csharp
+public class Language : FullAuditedAggregateRoot<Guid>, ILanguageInfo, IMultiTenant
+{
+    public Guid? TenantId { get; private set; }
+    public string CultureName { get; protected set; }
+    public string UiCultureName { get; protected set; }
+    public string DisplayName { get; protected set; }
+    public string? FlagIcon { get; set; }
+    public bool IsEnabled { get; set; }
+    
+    // ...
+}
+```
+Bu sınıf, sistemdeki dillerin tanımlandığı temel varlıktır. Çoklu tenant desteği için IMultiTenant arayüzü uygulanmıştır.
 
-In the production environment, you need to use a production signing certificate. ABP Framework sets up signing and encryption certificates in your application and expects an `openiddict.pfx` file in your application.
+## 📝 Çeviri Metinleri: LanguageText Entity'si
 
-To generate a signing certificate, you can use the following command:
-
-```bash
-dotnet dev-certs https -v -ep openiddict.pfx -p ad70715f-f742-43fc-9eed-d72c612802e4
+```csharp
+public class LanguageText : AuditedAggregateRoot<Guid>, IMultiTenant
+{
+    public string ResourceName { get; set; }
+    public string CultureName { get; set; }
+    public string Name { get; set; }
+    public string Value { get; set; }
+    // ...
+}
 ```
 
-> `ad70715f-f742-43fc-9eed-d72c612802e4` is the password of the certificate, you can change it to any password you want.
+Her bir çeviri metni, ilgili kültür (CultureName) ve anahtar (Name) ile ilişkilendirilmiştir. Örneğin:
 
-It is recommended to use **two** RSA certificates, distinct from the certificate(s) used for HTTPS: one for encryption, one for signing.
-
-For more information, please refer to: [OpenIddict Certificate Configuration](https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html#registering-a-certificate-recommended-for-production-ready-scenarios)
-
-> Also, see the [Configuring OpenIddict](https://abp.io/docs/latest/Deployment/Configuring-OpenIddict#production-environment) documentation for more information.
-
-### Solution structure
-
-This is a layered monolith application that consists of the following applications:
-
-* `AbpDynamicResourceManagement.DbMigrator`: A console application which applies the migrations and also seeds the initial data. It is useful on development as well as on production environment.
-* `AbpDynamicResourceManagement.Web`: ASP.NET Core MVC / Razor Pages application that is the essential web application of the solution.
+| CultureName | Name         | Value   |
+| ----------- | ------------ | ------- |
+| tr          | HelloMessage | Merhaba |
+| en          | HelloMessage | Hello   |
 
 
-## Deploying the application
+## 📦 Repository Katmanı
+Arayüz
+```csharp
+public interface ILanguageTextRepository : IRepository<LanguageText, Guid>
+{
+    Task<LanguageText> GetdByCultureNameAndNameAsync(string cultureName, string name);
+    Task<List<LanguageText>> GetListByCultureNameAsync(string cultureName);
+}
+```
 
-Deploying an ABP application follows the same process as deploying any .NET or ASP.NET Core application. However, there are important considerations to keep in mind. For detailed guidance, refer to ABP's [deployment documentation](https://abp.io/docs/latest/Deployment/Index).
+Uygulama
+```csharp
+public class LanguageTextRepository : EfCoreRepository<AbpDynamicResourceManagementDbContext, LanguageText, Guid>, ILanguageTextRepository
+{
+    public async Task<LanguageText> GetdByCultureNameAndNameAsync(string cultureName, string name)
+    {
+        var dbSet = await GetDbSetAsync();
+        return await dbSet.FirstOrDefaultAsync(l => l.CultureName == cultureName && l.Name == name);
+    }
 
-### Additional resources
+    public async Task<List<LanguageText>> GetListByCultureNameAsync(string cultureName)
+    {
+        var dbSet = await GetDbSetAsync();
+        return await dbSet.Where(l => l.CultureName == cultureName).ToListAsync();
+    }
+}
+```
+Bu sınıf, veritabanı üzerinden dil verilerine ulaşmak için gerekli temel metodları sağlar.
 
-You can see the following resources to learn more about your solution and the ABP Framework:
+## 🧩 ABP’ye Entegrasyon: DynamicLocalizationResourceContributor
+```csharp
+public class DynamicLocalizationResourceContributor : ILocalizationResourceContributor
+{
+    private ILanguageTextRepository _languageTextRepository;
 
-* [Web Application Development Tutorial](https://abp.io/docs/latest/tutorials/book-store/part-1)
-* [Application Startup Template](https://abp.io/docs/latest/startup-templates/application/index)
+    public void Initialize(LocalizationResourceInitializationContext context)
+    {
+        _languageTextRepository = context.ServiceProvider.GetRequiredService<ILanguageTextRepository>();
+    }
+
+    public void Fill(string cultureName, Dictionary<string, LocalizedString> dictionary)
+    {
+        var texts = AsyncHelper.RunSync(() => _languageTextRepository.GetListByCultureNameAsync(cultureName));
+        foreach (var item in texts)
+        {
+            dictionary[item.Name] = new LocalizedString(item.Name, item.Value);
+        }
+    }
+
+    public async Task FillAsync(string cultureName, Dictionary<string, LocalizedString> dictionary)
+    {
+        var texts = await _languageTextRepository.GetListByCultureNameAsync(cultureName);
+        foreach (var item in texts)
+        {
+            dictionary[item.Name] = new LocalizedString(item.Name, item.Value);
+        }
+    }
+
+    public LocalizedString? GetOrNull(string cultureName, string name)
+    {
+        var item = AsyncHelper.RunSync(() => _languageTextRepository.GetdByCultureNameAndNameAsync(cultureName, name));
+        return item == null ? null : new LocalizedString(name, item.Value);
+    }
+
+    public async Task<IEnumerable<string>> GetSupportedCulturesAsync()
+    {
+        return (await _languageTextRepository.GetListAsync()).Select(x => x.CultureName).Distinct();
+    }
+}
+```
+
+Bu sınıf, ABP’nin localization altyapısına bağlanarak .resx yerine veritabanından verileri alır.
+
+## ⚙️ Modül Yapılandırması
+```csharp
+public class AbpDynamicResourceManagementDomainModule : AbpModule
+{
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        Configure<AbpLocalizationOptions>(options =>
+        {
+            options.Languages.Add(new LanguageInfo("en", "en", "English"));
+            options.Languages.Add(new LanguageInfo("tr", "tr", "Türkçe"));
+
+            options.GlobalContributors.Add<DynamicLocalizationResourceContributor>();
+        });
+    }
+}
+```
+GlobalContributors koleksiyonuna DynamicLocalizationResourceContributor eklenerek sistemde kullanılacak lokalizasyon sağlayıcısı tanıtılır.
+
+## 🧪 Kullanım Örneği
+Bir sayfada lokalize bir mesaj göstermek istediğinizde ABP’nin sağladığı IStringLocalizer<T> ya da IStringLocalizerFactory kullanılabilir:
+
+```csharp
+public class HomeController : Controller
+{
+    private readonly IStringLocalizer<HomeController> _localizer;
+
+    public HomeController(IStringLocalizer<HomeController> localizer)
+    {
+        _localizer = localizer;
+    }
+
+    public IActionResult Index()
+    {
+        var message = _localizer["HelloMessage"];
+        return View("Index", message);
+    }
+}
+```
+
+## 🧩 Çok Kiracılı (Multi-Tenant) Destek
+Her iki entity (Language, LanguageText) IMultiTenant arayüzünü uyguladığı için ABP’nin tenant filtreleme altyapısından otomatik olarak faydalanır.
+
+## 📌 Sonuç
+Bu yapı sayesinde:
+- .json dosyalarına bağlı kalmadan içerikleri dinamik olarak yönetebilirsiniz.
+- Yönetici paneli üzerinden canlı dil güncellemeleri yapabilirsiniz.
+- Her tenant için farklı dil çevirileri sunabilirsiniz.
+
+ABP Framework’ün sunduğu altyapı ile birlikte dinamik lokalizasyon, özellikle SaaS mimarilerinde çok güçlü bir özelliktir.
+
