@@ -1,0 +1,80 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXLiteTheme": {
+      "version": "4.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.Account": {
+      "version": "9.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.OpenIddict": {
+      "version": "9.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.Identity": {
+      "version": "9.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.TenantManagement": {
+      "version": "9.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "9.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "9.2.1",
+      "isInstalled": true
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "9.2.1",
+      "isInstalled": true
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {}
+    }
+  },
+  "packages": {
+    "AbpDynamicResourceManagement.Application": {
+      "path": "src/AbpDynamicResourceManagement.Application/AbpDynamicResourceManagement.Application.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.Domain.Shared": {
+      "path": "src/AbpDynamicResourceManagement.Domain.Shared/AbpDynamicResourceManagement.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.Application.Contracts": {
+      "path": "src/AbpDynamicResourceManagement.Application.Contracts/AbpDynamicResourceManagement.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.HttpApi": {
+      "path": "src/AbpDynamicResourceManagement.HttpApi/AbpDynamicResourceManagement.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.HttpApi.Client": {
+      "path": "src/AbpDynamicResourceManagement.HttpApi.Client/AbpDynamicResourceManagement.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.Web": {
+      "path": "src/AbpDynamicResourceManagement.Web/AbpDynamicResourceManagement.Web.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.EntityFrameworkCore": {
+      "path": "src/AbpDynamicResourceManagement.EntityFrameworkCore/AbpDynamicResourceManagement.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.DbMigrator": {
+      "path": "src/AbpDynamicResourceManagement.DbMigrator/AbpDynamicResourceManagement.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "AbpDynamicResourceManagement.Domain": {
+      "path": "src/AbpDynamicResourceManagement.Domain/AbpDynamicResourceManagement.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}
