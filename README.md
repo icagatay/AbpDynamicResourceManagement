@@ -129,7 +129,7 @@ public class DynamicLocalizationResourceContributor : ILocalizationResourceContr
 }
 ```
 
-Bu sınıf, ABP’nin localization altyapısına bağlanarak .resx yerine veritabanından verileri alır.
+Bu sınıf, ABP’nin localization altyapısına bağlanarak .json yerine veritabanından verileri alır.
 
 ## ⚙️ Modül Yapılandırması
 ```csharp
