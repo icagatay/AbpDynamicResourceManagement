@@ -2,7 +2,7 @@
 
 ## 🎯 Giriş
 
-ABP Framework, güçlü bir yerelleştirme (localization) altyapısı ile gelir. Ancak varsayılan olarak çeviri metinleri `.resx` dosyalarında sabitlenmiştir. Bu yapı, çevrimiçi yönetim paneli üzerinden dil içeriğini değiştirme, çok kiracılı uygulamalarda tenant bazlı çeviri sağlama gibi esneklikler sunmaz.
+ABP Framework, güçlü bir yerelleştirme (localization) altyapısı ile gelir. Ancak varsayılan olarak çeviri metinleri `.json` dosyalarında sabitlenmiştir. Bu yapı, çevrimiçi yönetim paneli üzerinden dil içeriğini değiştirme, çok kiracılı uygulamalarda tenant bazlı çeviri sağlama gibi esneklikler sunmaz.
 
 Bu yazıda, **ABP Framework’te dinamik olarak veritabanı destekli lokalizasyon** işlemini nasıl gerçekleştirebileceğimizi adım adım ele alacağız. Örnek olarak oluşturulmuş `AbpDynamicResourceManagement` projesinden kod parçalarıyla ilerleyeceğiz.
 
